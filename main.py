@@ -47,16 +47,19 @@ def get_data(ticker, data_source='alphavantage'):
                     df.loc[-1,:] = data_row
                     df.index += 1
             print('Loaded data from the alphavantage')
-            print('Data saved to : ', file_to_save)
+            
+            file_to_save_dir = os.path.dirname(file_to_save)
+            if not os.path.exists(file_to_save_dir):
+                os.makedirs(file_to_save_dir)
             df.to_csv(file_to_save)
+            print('Data saved to : ', file_to_save)
 
         # If the data is already there, just load it from the CSV.
         else:
-            print('File already exists. Loading data from CSV')
+            print('File {} already exists. Loading data from file.'.format(file_to_save))
             df = pd.read_csv(file_to_save)
 
     elif data_source == 'kaggle':
-
         # ====================== Loading Data from Kaggle ==================================
         # You will be using HP's data. Feel free to experiment with other data.
         # But while doing so, be careful to have a large enough dataset and also pay attention to the data normalization.
@@ -68,22 +71,49 @@ def get_data(ticker, data_source='alphavantage'):
     return df.sort_values('Date')
 
 
-data_df = get_data(ticker='GOOG')
+data_df = get_data(ticker='AAPL')
 print(data_df)
 
-plt.figure(figsize=(18, 9))
-plt.plot(range(data_df.shape[0]), (data_df['Low'] + data_df['High']) / 2.0)
-plt.xticks(range(0, data_df.shape[0], 500), data_df['Date'].loc[::500], rotation=45)
-plt.xlabel('Date', fontsize=18)
-plt.ylabel('Mid Price', fontsize=18)
-# plt.show()
+# plt.figure(figsize=(18, 9))
+# plt.plot(range(data_df.shape[0]), (data_df['Low'] + data_df['High']) / 2.0)
+# plt.xticks(range(0, data_df.shape[0], 500), data_df['Date'].loc[::500], rotation=45)
+# plt.xlabel('Date', fontsize=18)
+# plt.ylabel('Mid Price', fontsize=18)
 
-data = data_df.loc[:, ['Low', 'High', 'Open', 'Close']].to_numpy()
+data = data_df.loc[:, ['Open', 'Date']].to_numpy()
 print(data)
 
-SPLIT = 0.8
-train_size = int(0.8 * len(data))
-train_data = data[:train_size]
-test_data = data[train_size:]
-print('Train:', train_data)
-print('Test:', test_data)
+start_date = '2014-06-09'
+ret_full = [(float((o2 - o1) / o1), (o1, d1), (o2, d2)) for (o1, d1), (o2, d2) in zip(data, data[1:]) if np.datetime64(d1) > np.datetime64(start_date)]
+ret = [r for r, _, _ in ret_full]
+# print(ret)
+print('|||||||||||||||||||||||||||||')
+print('Since {}'.format(start_date))
+
+print('|||MIN|||')
+print(min(ret))
+print(ret_full[np.argmin(ret)])
+print(len([r for r in ret if r < 0.0]))
+
+print('|||MAX|||')
+print(max(ret))
+print(ret_full[np.argmax(ret)])
+print(len([r for r in ret if r > 0.0]))
+
+print('|||Aggregate|||')
+print('Avg: {}'.format(np.average(ret)))
+print('Std: {}'.format(np.std(ret)))
+
+data_filtered = [d for d in data if np.datetime64(d[1]) > np.datetime64(start_date)]
+print(data_filtered[0], data_filtered[-1], len(data_filtered))
+
+plt.hist(ret, bins=100)
+
+# SPLIT = 0.8
+# train_size = int(0.8 * len(data))
+# train_data = data[:train_size]
+# test_data = data[train_size:]
+# print('Train:', train_data)
+# print('Test:', test_data)
+
+# plt.show()
